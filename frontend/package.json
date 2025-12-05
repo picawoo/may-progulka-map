@@ -1,5 +1,5 @@
 {
-  "name": "may-walk-demo",
+  "name": "may-walk-map",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@pbe/react-yandex-maps": "^1.2.5",
     "@react-google-maps/api": "^2.20.7",
     "@types/google.maps": "^3.58.1",
+    "rc-slider": "^11.1.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
