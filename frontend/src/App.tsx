@@ -1,6 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GoogleMap, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import "./App.css";
+import {
+  GoogleMap,
+  MarkerF,
+  Polyline,
+  useJsApiLoader,
+} from "@react-google-maps/api";
+import {
+  Map as YMap,
+  Placemark,
+  Polyline as YPolyline,
+  YMaps,
+} from "@pbe/react-yandex-maps";
+import { useMemo, useState } from "react";
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
 
 import bannerImage from "./assets/mayp2025_3.png";
 import footerEmail from "./assets/footer_email.png";
@@ -8,6 +21,12 @@ import footerLogo from "./assets/footer_logo.png";
 import footerPhone from "./assets/footer_phone.png";
 import footerTelegram from "./assets/footer_telegram.png";
 import footerVk from "./assets/footer_vk.png";
+import { mockRoutes } from "./data/mockRoutes";
+import type { RouteItem, WalkType } from "./data/mockRoutes";
+
+type EnvSource = { env?: Record<string, string | undefined> };
+
+declare const process: EnvSource | undefined;
 
 type NavItem = {
   label: string;
@@ -15,27 +34,6 @@ type NavItem = {
   variant?: "main";
   submenu?: { label: string; href: string }[];
 };
-
-type RouteType = "walking" | "cycling";
-
-type RoutePathPoint = {
-  lat: number;
-  lng: number;
-};
-
-type Route = {
-  id: string;
-  title: string;
-  date: string;
-  start: string;
-  distanceKm: number;
-  types: RouteType[];
-  downloadUrl: string;
-  detailsUrl: string;
-  path: RoutePathPoint[];
-};
-
-type MapProvider = "google";
 
 const navItems: NavItem[] = [
   { label: "Главная", href: "https://mayprogulka.ru/", variant: "main" },
@@ -82,251 +80,212 @@ const navItems: NavItem[] = [
   { label: "Вход", href: "https://mayprogulka.ru/my/", variant: "main" },
 ];
 
-const routeTypeLabels: Record<RouteType, string> = {
-  walking: "Пешая",
-  cycling: "Велосипедная",
-};
+function App() {
+  const getEnvVar = (keys: string[]) => {
+    const viteEnv =
+      typeof import.meta !== "undefined"
+        ? (import.meta as unknown as EnvSource).env
+        : undefined;
+    const nodeEnv =
+      typeof process !== "undefined" && process?.env ? process.env : undefined;
+    for (const key of keys) {
+      if (viteEnv?.[key]) return viteEnv[key] as string;
+      if (nodeEnv?.[key]) return nodeEnv[key] as string;
+    }
+    return "";
+  };
 
-const mapProviderLabels: Record<MapProvider, string> = {
-  google: "Google",
-};
+  const googleApiKey = getEnvVar([
+    "VITE_GOOGLE_MAPS_API_KEY",
+    "REACT_APP_GOOGLE_MAPS_API_KEY",
+  ]);
+  const yandexApiKey = getEnvVar([
+    "VITE_YANDEX_MAPS_API_KEY",
+    "REACT_APP_YANDEX_MAPS_API_KEY",
+  ]);
 
-const routeColorByType: Record<RouteType, string> = {
-  walking: "#8c5bff",
-  cycling: "#ff5db1",
-};
+  const { isLoaded: isGoogleLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: googleApiKey,
+  });
 
-const defaultMapCenter: google.maps.LatLngLiteral = {
-  lat: 56.8389261,
-  lng: 60.6057028,
-};
+  const routes: RouteItem[] = useMemo(() => mockRoutes, []);
 
-const googleMapOptions: google.maps.MapOptions = {
-  disableDefaultUI: true,
-  styles: [
-    {
-      featureType: "administrative",
-      elementType: "geometry",
-      stylers: [{ visibility: "off" }],
-    },
-    {
-      featureType: "poi",
-      stylers: [{ visibility: "off" }],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry",
-      stylers: [{ color: "#ffffff" }],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry.stroke",
-      stylers: [{ color: "#f9c4b0" }],
-    },
-    {
-      featureType: "water",
-      stylers: [{ color: "#bfe3ff" }],
-    },
-    {
-      featureType: "landscape",
-      stylers: [{ color: "#fdf2eb" }],
-    },
-  ],
-};
-
-const mapContainerStyle = {
-  width: "100%",
-  height: "100%",
-};
-
-const getRouteColor = (types: RouteType[]) => {
-  if (types.length === 1) {
-    return routeColorByType[types[0]];
-  }
-  return routeColorByType[types[0]];
-};
-
-type RoutesMapProps = {
-  provider: MapProvider;
-  routes: Route[];
-  isLoading: boolean;
-};
-
-const RoutesMap = ({ provider, routes, isLoading }: RoutesMapProps) => {
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const mapRef = useRef<google.maps.Map | null>(null);
-
-  const { isLoaded, loadError } = useJsApiLoader(
-    provider === "google" && googleMapsApiKey
-      ? {
-          id: "may-walk-google-map",
-          googleMapsApiKey,
-        }
-      : {
-          id: "may-walk-google-map",
-          googleMapsApiKey: "",
-        }
+  const years = useMemo(
+    () =>
+      Array.from(new Set(routes.map((r) => new Date(r.date).getFullYear()))),
+    [routes]
   );
 
-  const handleLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-  }, []);
+  const startPlaces = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          routes.map(
+            (r) => `${r.startLocation.name} (${r.startLocation.address})`
+          )
+        )
+      ),
+    [routes]
+  );
 
-  const handleUnmount = useCallback(() => {
-    mapRef.current = null;
-  }, []);
+  const [mapProvider, setMapProvider] = useState<"google" | "yandex">("yandex");
+  const [selectedYears, setSelectedYears] = useState<string[]>([]);
+  const [selectedStarts, setSelectedStarts] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<WalkType[]>([
+    "walk",
+    "bike",
+  ]);
+  const [distance, setDistance] = useState<[number, number]>([10, 80]);
+  const [appliedFilters, setAppliedFilters] = useState({
+    years: [] as string[],
+    starts: [] as string[],
+    types: ["walk", "bike"] as WalkType[],
+    distanceMin: 10,
+    distanceMax: 80,
+  });
+  const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
+  const [isRoutesCollapsed, setIsRoutesCollapsed] = useState(false);
 
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      !window.google ||
-      !mapRef.current ||
-      !routes.length
-    ) {
-      return;
-    }
-    const bounds = new window.google.maps.LatLngBounds();
-    routes.forEach((route) => {
-      route.path.forEach((point) => bounds.extend(point));
+  const filteredRoutes = useMemo(() => {
+    return routes.filter((route) => {
+      const year = String(new Date(route.date).getFullYear());
+      const start = `${route.startLocation.name} (${route.startLocation.address})`;
+      const byYear =
+        appliedFilters.years.length === 0 ||
+        appliedFilters.years.includes(year);
+      const byStart =
+        appliedFilters.starts.length === 0 ||
+        appliedFilters.starts.includes(start);
+      const byType =
+        appliedFilters.types.length === 0 ||
+        appliedFilters.types.includes(route.walkType);
+      const byDistance =
+        route.distanceKm >= appliedFilters.distanceMin &&
+        route.distanceKm <= appliedFilters.distanceMax;
+      return byYear && byStart && byType && byDistance;
     });
-    mapRef.current.fitBounds(bounds, 40);
+  }, [appliedFilters, routes]);
+
+  const firstCenter = useMemo(() => {
+    const base = routes[0]?.startLocation.coord;
+    return base || { lat: 56.8389, lng: 60.6057 };
   }, [routes]);
 
-  if (provider !== "google") {
-    return (
-      <div className="routes-map-placeholder">
-        Выберите доступный слой карты
-      </div>
-    );
-  }
+  const applyFilters = () => {
+    setAppliedFilters({
+      years: selectedYears,
+      starts: selectedStarts,
+      types: selectedTypes,
+      distanceMin: distance[0],
+      distanceMax: distance[1],
+    });
+  };
 
-  if (!googleMapsApiKey) {
-    return (
-      <div className="routes-map-placeholder">
-        Добавьте переменную <code>VITE_GOOGLE_MAPS_API_KEY</code> для
-        отображения карты Google.
-      </div>
-    );
-  }
+  const toggleSelection = (
+    value: string,
+    list: string[],
+    setter: (next: string[]) => void
+  ) => {
+    if (list.includes(value)) {
+      setter(list.filter((v) => v !== value));
+    } else {
+      setter([...list, value]);
+    }
+  };
 
-  if (loadError) {
-    return (
-      <div className="routes-map-placeholder">
-        Не удалось загрузить карту Google
-      </div>
-    );
-  }
+  const toggleType = (value: WalkType) => {
+    if (selectedTypes.includes(value)) {
+      setSelectedTypes(selectedTypes.filter((t) => t !== value));
+    } else {
+      setSelectedTypes([...selectedTypes, value]);
+    }
+  };
 
-  if (!isLoaded) {
-    return <div className="routes-map-placeholder">Загружаем карту...</div>;
-  }
-
-  if (!routes.length && !isLoading) {
-    return (
-      <div className="routes-map-placeholder">
-        Нажмите «Применить», чтобы показать маршруты на карте
-      </div>
-    );
-  }
-
-  return (
+  const renderGoogleMap = () => (
     <GoogleMap
-      mapContainerStyle={mapContainerStyle}
-      onLoad={handleLoad}
-      onUnmount={handleUnmount}
-      options={googleMapOptions}
-      center={defaultMapCenter}
-      zoom={12}
+      mapContainerClassName="map-canvas"
+      center={firstCenter}
+      zoom={13}
+      options={{
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+      }}
     >
-      {routes.map((route) => (
+      {filteredRoutes.map((route) => (
         <Polyline
           key={route.id}
-          path={route.path}
+          path={route.track}
           options={{
-            strokeColor: getRouteColor(route.types),
-            strokeOpacity: 0.95,
+            strokeColor: route.walkType === "walk" ? "#7b5be6" : "#ef8b6e",
+            strokeOpacity: 0.9,
             strokeWeight: 5,
           }}
         />
       ))}
+      {filteredRoutes.map((route) => (
+        <MarkerF
+          key={`${route.id}-start`}
+          position={route.startLocation.coord}
+          label="Старт"
+        />
+      ))}
+      {filteredRoutes.flatMap((route) =>
+        route.controlPoints.map((cp) => (
+          <MarkerF
+            key={`${route.id}-${cp.label}`}
+            position={cp.coord}
+            label={cp.label}
+          />
+        ))
+      )}
     </GoogleMap>
   );
-};
 
-function App() {
-  const [mapProvider, setMapProvider] = useState<MapProvider>("google");
-  const [routes, setRoutes] = useState<Route[]>([]);
-  const [displayedRoutes, setDisplayedRoutes] = useState<Route[]>([]);
-  const [isLoadingRoutes, setIsLoadingRoutes] = useState(true);
-  const [routesError, setRoutesError] = useState<string | null>(null);
-  const [selectedYear, setSelectedYear] = useState<string>("");
-  const [selectedStart, setSelectedStart] = useState<string>("");
-  const [selectedTypes, setSelectedTypes] = useState<
-    Record<RouteType, boolean>
-  >({
-    walking: true,
-    cycling: true,
-  });
-  const [maxDistance, setMaxDistance] = useState<number>(70);
-
-  useEffect(() => {
-    const loadRoutes = async () => {
-      try {
-        const response = await fetch("/routes.json");
-        if (!response.ok) {
-          throw new Error("Не удалось загрузить маршруты");
-        }
-        const data: Route[] = await response.json();
-        setRoutes(data);
-        setDisplayedRoutes(data);
-      } catch (error) {
-        setRoutesError(
-          error instanceof Error
-            ? error.message
-            : "Произошла ошибка загрузки маршрутов"
-        );
-      } finally {
-        setIsLoadingRoutes(false);
-      }
-    };
-
-    void loadRoutes();
-  }, []);
-
-  const years = useMemo(
-    () =>
-      Array.from(
-        new Set(routes.map((route) => new Date(route.date).getFullYear()))
-      ).sort(),
-    [routes]
+  const renderYandexMap = () => (
+    <YMaps query={yandexApiKey ? { apikey: yandexApiKey } : undefined}>
+      <YMap
+        className="map-canvas"
+        defaultState={{
+          center: [firstCenter.lat, firstCenter.lng],
+          zoom: 13,
+          controls: [],
+        }}
+      >
+        {filteredRoutes.map((route) => (
+          <YPolyline
+            key={route.id}
+            geometry={route.track.map((p) => [p.lat, p.lng])}
+            options={{
+              strokeColor: route.walkType === "walk" ? "#7b5be6" : "#ef8b6e",
+              strokeOpacity: 0.9,
+              strokeWidth: 5,
+            }}
+          />
+        ))}
+        {filteredRoutes.map((route) => (
+          <Placemark
+            key={`${route.id}-start`}
+            geometry={[
+              route.startLocation.coord.lat,
+              route.startLocation.coord.lng,
+            ]}
+            properties={{ balloonContent: "Старт" }}
+          />
+        ))}
+        {filteredRoutes.flatMap((route) =>
+          route.controlPoints.map((cp) => (
+            <Placemark
+              key={`${route.id}-${cp.label}`}
+              geometry={[cp.coord.lat, cp.coord.lng]}
+              properties={{ balloonContent: cp.label }}
+            />
+          ))
+        )}
+      </YMap>
+    </YMaps>
   );
-
-  const starts = useMemo(
-    () => Array.from(new Set(routes.map((route) => route.start))).sort(),
-    [routes]
-  );
-
-  const filteredRoutes = useMemo(() => {
-    return routes.filter((route) => {
-      const routeYear = new Date(route.date).getFullYear().toString();
-      const matchYear = selectedYear ? routeYear === selectedYear : true;
-      const matchStart = selectedStart ? route.start === selectedStart : true;
-      const matchType =
-        selectedTypes.walking !== selectedTypes.cycling
-          ? route.types.some((type) => selectedTypes[type])
-          : true;
-      const matchDistance = route.distanceKm <= maxDistance;
-
-      return matchYear && matchStart && matchType && matchDistance;
-    });
-  }, [routes, selectedYear, selectedStart, selectedTypes, maxDistance]);
-
-  const formatRouteDate = (isoDate: string) =>
-    new Intl.DateTimeFormat("ru-RU", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(isoDate));
 
   return (
     <>
@@ -382,187 +341,278 @@ function App() {
         </div>
       </div>
 
-      <section className="routes-section">
-        <div className="routes-shell">
-          <aside className="routes-panel routes-panel-filters">
-            <h2 className="routes-panel-title">Фильтры</h2>
+      <div className="map-section">
+        <div className="map-wrapper">
+          {mapProvider === "google" ? (
+            isGoogleLoaded ? (
+              renderGoogleMap()
+            ) : (
+              <div className="map-placeholder">
+                Загрузка карты Google...
+                {!googleApiKey && (
+                  <div className="map-placeholder-sub">
+                    Добавьте ключ VITE_GOOGLE_MAPS_API_KEY для отображения.
+                  </div>
+                )}
+              </div>
+            )
+          ) : (
+            renderYandexMap()
+          )}
 
-            <form
-              className="routes-filters-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setDisplayedRoutes(filteredRoutes);
-              }}
-            >
-              <label className="routes-field">
-                <span className="routes-field-label">Год</span>
-                <select
-                  value={selectedYear}
-                  onChange={(event) => setSelectedYear(event.target.value)}
-                >
-                  <option value="">Выбрать...</option>
-                  {years.map((yearOption) => (
-                    <option key={yearOption} value={yearOption}>
-                      {yearOption}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="routes-field">
-                <span className="routes-field-label">Старт</span>
-                <select
-                  value={selectedStart}
-                  onChange={(event) => setSelectedStart(event.target.value)}
-                >
-                  <option value="">Выбрать...</option>
-                  {starts.map((startOption) => (
-                    <option key={startOption} value={startOption}>
-                      {startOption}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <fieldset className="routes-field routes-fieldset">
-                <legend className="routes-field-label">Тип прогулки</legend>
-                <label className="routes-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.walking}
-                    onChange={(event) =>
-                      setSelectedTypes((prev) => ({
-                        ...prev,
-                        walking: event.target.checked,
-                      }))
-                    }
-                  />
-                  Пешая
-                </label>
-                <label className="routes-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.cycling}
-                    onChange={(event) =>
-                      setSelectedTypes((prev) => ({
-                        ...prev,
-                        cycling: event.target.checked,
-                      }))
-                    }
-                  />
-                  Велосипедная
-                </label>
-              </fieldset>
-
-              <label className="routes-field">
-                <span className="routes-field-label">
-                  Протяженность: до {maxDistance} км
-                </span>
-                <input
-                  type="range"
-                  min={10}
-                  max={70}
-                  step={5}
-                  value={maxDistance}
-                  onChange={(event) =>
-                    setMaxDistance(Number(event.target.value))
-                  }
-                />
-                <div className="routes-range-scale">
-                  {[10, 20, 30, 40, 50, 60, 70].map((mark) => (
-                    <span key={mark}>{mark}</span>
-                  ))}
-                </div>
-              </label>
-
-              <button type="submit" className="routes-apply-btn">
-                Применить
-              </button>
-            </form>
-          </aside>
-
-          <div className="routes-map-card">
-            <div className="routes-map-header">
-              <h2>Карта</h2>
-              <label className="routes-field routes-map-select">
-                <span className="routes-field-label">Слой</span>
+          <div className="map-overlay map-overlay-top">
+            <div className="map-card map-card-small">
+              <span>Карта:</span>
+              <div className="select map-provider-select">
                 <select
                   value={mapProvider}
-                  onChange={(event) =>
-                    setMapProvider(event.target.value as MapProvider)
+                  onChange={(e) =>
+                    setMapProvider(e.target.value as "google" | "yandex")
                   }
                 >
-                  {Object.entries(mapProviderLabels).map(([value, label]) => (
-                    <option value={value} key={value}>
-                      {label}
-                    </option>
-                  ))}
+                  <option value="yandex">Яндекс</option>
+                  <option value="google">Google</option>
                 </select>
-              </label>
-            </div>
-            <div className="routes-map-frame">
-              <RoutesMap
-                provider={mapProvider}
-                routes={displayedRoutes}
-                isLoading={isLoadingRoutes}
-              />
+              </div>
             </div>
           </div>
 
-          <aside className="routes-panel routes-panel-list">
-            <h2 className="routes-panel-title">Маршруты</h2>
-            <div className="routes-list">
-              {isLoadingRoutes && (
-                <p className="routes-note">Загружаем маршруты...</p>
-              )}
-              {routesError && !isLoadingRoutes && (
-                <p className="routes-error">{routesError}</p>
-              )}
-              {!isLoadingRoutes &&
-                !routesError &&
-                filteredRoutes.length === 0 && (
-                  <p className="routes-note">
-                    Не найдено маршрутов по выбранным фильтрам
-                  </p>
-                )}
-              {!isLoadingRoutes &&
-                !routesError &&
-                filteredRoutes.map((route) => (
-                  <article className="route-card" key={route.id}>
-                    <div>
-                      <div className="route-date">
-                        {formatRouteDate(route.date)}
+          {isFiltersCollapsed ? (
+            <button
+              className="panel-tab panel-tab-left"
+              onClick={() => setIsFiltersCollapsed(false)}
+              aria-label="Развернуть фильтры"
+            >
+              Фильтры
+            </button>
+          ) : (
+            <div className="map-overlay map-overlay-left">
+              <div className="map-card filters-card">
+                <div className="panel-header">
+                  <h3>Фильтры</h3>
+                  <button
+                    className="panel-toggle"
+                    onClick={() => setIsFiltersCollapsed(true)}
+                    aria-label="Свернуть фильтры"
+                  >
+                    <img src="/minimize-arrow.svg" alt="" />
+                  </button>
+                </div>
+
+                <div className="form-group">
+                  <label>Год</label>
+                  <details className="dropdown">
+                    <summary>Выбрать...</summary>
+                    <div className="dropdown-list">
+                      <div className="dropdown-actions">
+                        <button
+                          className="dropdown-action"
+                          type="button"
+                          onClick={() => setSelectedYears(years.map(String))}
+                        >
+                          Выбрать все
+                        </button>
+                        <button
+                          className="dropdown-action"
+                          type="button"
+                          onClick={() => setSelectedYears([])}
+                        >
+                          Очистить
+                        </button>
                       </div>
-                      <div className="route-title">{route.title}</div>
-                      <div className="route-meta">
-                        {route.start} · {route.distanceKm} км ·{" "}
-                        {route.types
-                          .map((type) => routeTypeLabels[type])
-                          .join(", ")}
+                      {years.map((year) => (
+                        <label className="checkbox-line" key={year}>
+                          <input
+                            type="checkbox"
+                            checked={selectedYears.includes(String(year))}
+                            onChange={() =>
+                              toggleSelection(
+                                String(year),
+                                selectedYears,
+                                setSelectedYears
+                              )
+                            }
+                          />
+                          <span>{year}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+
+                <div className="form-group">
+                  <label>Старт</label>
+                  <details className="dropdown">
+                    <summary>Выбрать...</summary>
+                    <div className="dropdown-list">
+                      <div className="dropdown-actions">
+                        <button
+                          className="dropdown-action"
+                          type="button"
+                          onClick={() => setSelectedStarts(startPlaces)}
+                        >
+                          Выбрать все
+                        </button>
+                        <button
+                          className="dropdown-action"
+                          type="button"
+                          onClick={() => setSelectedStarts([])}
+                        >
+                          Очистить
+                        </button>
                       </div>
+                      {startPlaces.map((place) => (
+                        <label className="checkbox-line" key={place}>
+                          <input
+                            type="checkbox"
+                            checked={selectedStarts.includes(place)}
+                            onChange={() =>
+                              toggleSelection(
+                                place,
+                                selectedStarts,
+                                setSelectedStarts
+                              )
+                            }
+                          />
+                          <span>{place}</span>
+                        </label>
+                      ))}
                     </div>
-                    <div className="route-actions">
-                      <a
-                        className="route-btn route-btn-light"
-                        href={route.downloadUrl}
-                      >
-                        Скачать
-                      </a>
-                      <a
-                        className="route-btn route-btn-primary"
-                        href={route.detailsUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Подробнее
-                      </a>
-                    </div>
-                  </article>
-                ))}
+                  </details>
+                </div>
+
+                <div className="form-group">
+                  <label>Тип прогулки</label>
+                  <div className="checkbox-block">
+                    <label className="checkbox-line inline">
+                      <input
+                        type="checkbox"
+                        checked={selectedTypes.includes("walk")}
+                        onChange={() => toggleType("walk")}
+                      />
+                      <span>Пешая</span>
+                    </label>
+                    <label className="checkbox-line inline">
+                      <input
+                        type="checkbox"
+                        checked={selectedTypes.includes("bike")}
+                        onChange={() => toggleType("bike")}
+                      />
+                      <span>Велосипедная</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    Протяженность <br />
+                    <span className="muted">
+                      (от {distance[0]} до {distance[1]} км)
+                    </span>
+                  </label>
+                  <div className="range-slider-wrapper">
+                    <Slider
+                      range
+                      min={10}
+                      max={80}
+                      step={1}
+                      value={distance}
+                      onChange={(value) =>
+                        setDistance(value as [number, number])
+                      }
+                    />
+                  </div>
+                  <div className="range-scale">
+                    <span>10</span>
+                    <span>30</span>
+                    <span>50</span>
+                    <span>70</span>
+                    <span>80</span>
+                  </div>
+                </div>
+
+                <button className="btn-primary" onClick={applyFilters}>
+                  Применить
+                </button>
+              </div>
             </div>
-          </aside>
+          )}
+
+          {isRoutesCollapsed ? (
+            <button
+              className="panel-tab panel-tab-right"
+              onClick={() => setIsRoutesCollapsed(false)}
+              aria-label="Развернуть маршруты"
+            >
+              Маршруты
+            </button>
+          ) : (
+            <div className="map-overlay map-overlay-right">
+              <div className="map-card routes-card">
+                <div className="panel-header">
+                  <button
+                    className="panel-toggle panel-toggle-left"
+                    onClick={() => setIsRoutesCollapsed(true)}
+                    aria-label="Свернуть маршруты"
+                  >
+                    <img src="/minimize-arrow.svg" alt="" />
+                  </button>
+                  <h3>Маршруты</h3>
+                </div>
+
+                <div className="routes-list">
+                  {filteredRoutes.length === 0 && (
+                    <div className="empty">
+                      Нет маршрутов по выбранным фильтрам
+                    </div>
+                  )}
+                  {filteredRoutes.map((route) => (
+                    <div className="route-item" key={route.id}>
+                      <div className="route-card">
+                        <div className="route-date">
+                          {new Date(route.date).toLocaleDateString("ru-RU", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </div>
+                        <div className="route-title">{route.title}</div>
+                        <div className="route-meta">
+                          <span>{route.distanceKm} км</span>
+                          <span>
+                            {route.walkType === "walk"
+                              ? "Пешая"
+                              : "Велосипедная"}
+                          </span>
+                        </div>
+                        <div className="route-meta">
+                          <span>Старт: {route.startTime}</span>
+                          <span>Финиш: {route.finishTime}</span>
+                        </div>
+                        <div className="route-meta">
+                          <span>{route.startLocation.name}</span>
+                        </div>
+                      </div>
+                      <div className="route-buttons">
+                        <details className="dropdown small">
+                          <summary>Скачать</summary>
+                          <div className="dropdown-list">
+                            <a href={route.files.gpx}>GPX</a>
+                            <a href={route.files.kml}>KML</a>
+                          </div>
+                        </details>
+                        <a className="btn-secondary" href="#more">
+                          Подробнее
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
 
       <footer>
         <div className="footer-wrapper">
