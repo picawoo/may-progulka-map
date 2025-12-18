@@ -180,6 +180,7 @@ function App() {
       distanceMin: distance[0],
       distanceMax: distance[1],
     });
+    console.log(routes);
   };
 
   const toggleSelection = (
@@ -218,12 +219,14 @@ function App() {
           key={route.id}
           path={route.track}
           options={{
-            strokeColor: route.walkType === "walk" ? "#7b5be6" : "#ef8b6e",
+            strokeColor: route.color,
             strokeOpacity: 0.9,
             strokeWeight: 5,
           }}
         />
       ))}
+      {/*
+      Маркеры точек траекторий 
       {filteredRoutes.map((route) => (
         <MarkerF
           key={`${route.id}-start`}
@@ -240,6 +243,7 @@ function App() {
           />
         ))
       )}
+      */}
     </GoogleMap>
   );
 
@@ -258,12 +262,14 @@ function App() {
             key={route.id}
             geometry={route.track.map((p) => [p.lat, p.lng])}
             options={{
-              strokeColor: route.walkType === "walk" ? "#7b5be6" : "#ef8b6e",
+              strokeColor: route.color,
               strokeOpacity: 0.9,
               strokeWidth: 5,
             }}
           />
         ))}
+        {/*
+        Маркеры точек траекторий
         {filteredRoutes.map((route) => (
           <Placemark
             key={`${route.id}-start`}
@@ -283,6 +289,7 @@ function App() {
             />
           ))
         )}
+        */}
       </YMap>
     </YMaps>
   );
@@ -601,7 +608,10 @@ function App() {
                             <a href={route.files.kml}>KML</a>
                           </div>
                         </details>
-                        <a className="btn-secondary" href="#more">
+                        <a
+                          className="btn-secondary"
+                          href="https://mayprogulka.ru/archive/routes_archive/routes2024/"
+                        >
                           Подробнее
                         </a>
                       </div>
