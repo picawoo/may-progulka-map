@@ -30,8 +30,9 @@ function RouteForm({
     controlPoints: route?.controlPoints || [],
   });
 
-  const [gpxFile, setGpxFile] = useState<File | null>(null);
-  const [kmlFile, setKmlFile] = useState<File | null>(null);
+  // Файлы будут использованы в будущем для загрузки
+  // const [gpxFile, setGpxFile] = useState<File | null>(null);
+  // const [kmlFile, setKmlFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (route) {
@@ -104,11 +105,22 @@ function RouteForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Находим существующую локацию из mockRoutes или создаем новую
+    const existingRoute = route;
+    const startLocationObj = existingRoute?.startLocation || {
+      name: formData.startLocation || "",
+      address: "",
+      coord: { lat: 0, lng: 0 },
+    };
+    
     onSubmit({
-      ...formData,
       distanceKm: Number(formData.distanceKm),
+      walkType: formData.walkType,
       startTime: formData.startTimeFrom,
       finishTime: formData.finishTimeFrom,
+      startLocation: startLocationObj,
+      description: formData.description,
+      controlPoints: formData.controlPoints,
     });
   };
 
@@ -123,7 +135,9 @@ function RouteForm({
                 type="file"
                 id="gpx-file"
                 accept=".gpx"
-                onChange={(e) => setGpxFile(e.target.files?.[0] || null)}
+                onChange={() => {
+                  // Обработка файла будет добавлена позже
+                }}
                 style={{ display: "none" }}
               />
               <label htmlFor="gpx-file" className="file-upload-label">
@@ -247,7 +261,9 @@ function RouteForm({
                 type="file"
                 id="kml-file"
                 accept=".kml"
-                onChange={(e) => setKmlFile(e.target.files?.[0] || null)}
+                onChange={() => {
+                  // Обработка файла будет добавлена позже
+                }}
                 style={{ display: "none" }}
               />
               <label htmlFor="kml-file" className="file-upload-label">
