@@ -18,14 +18,13 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from ..routes.views import MapView, routes_api
+from ..routes.views import routes_geojson_list, download_gpx
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', MapView.as_view(), name='map'), # Главная страница
-    path('api/routes/', routes_api, name='api_routes'), # API
+    path('api/routes/', routes_geojson_list, name='api_routes_list'),
+    path('api/routes/download/<int:route_id>/', download_gpx, name='route_download'),
 ]
 
-# Чтобы работало скачивание файлов в dev-режиме
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
