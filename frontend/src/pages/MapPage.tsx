@@ -1,12 +1,6 @@
-import {
-  GoogleMap,
-  MarkerF,
-  Polyline,
-  useJsApiLoader,
-} from "@react-google-maps/api";
+import { GoogleMap, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import {
   Map as YMap,
-  Placemark,
   Polyline as YPolyline,
   YMaps,
 } from "@pbe/react-yandex-maps";
