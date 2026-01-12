@@ -145,7 +145,7 @@ function RouteForm({
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group hidden">
             <label>Маршрут на Тропинки.РУ</label>
             <div className="link-input-wrapper">
               <input
@@ -162,19 +162,14 @@ function RouteForm({
           <div className="form-group">
             <label>Протяженность</label>
             <div className="distance-input-wrapper">
-              <select
+              <input
+                type="text"
                 name="distanceKm"
                 value={formData.distanceKm}
                 onChange={handleInputChange}
-                className="distance-select"
-              >
-                <option value="">Выбрать...</option>
-                {Array.from({ length: 91 }, (_, i) => i + 10).map((km) => (
-                  <option key={km} value={km}>
-                    {km}
-                  </option>
-                ))}
-              </select>
+                className="distance-input"
+                placeholder="Введите..."
+              />
               <span className="distance-unit">Км</span>
             </div>
           </div>
@@ -203,7 +198,7 @@ function RouteForm({
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group hidden">
             <label>Добавить контрольные пункты</label>
             <div className="control-points-list">
               {formData.controlPoints.map((cp, index) => (
@@ -252,7 +247,7 @@ function RouteForm({
         </div>
 
         <div className="route-form-column">
-          <div className="form-group">
+          <div className="form-group hidden">
             <label>Перетащите KML файл сюда</label>
             <div className="file-upload-area">
               <input
@@ -271,7 +266,7 @@ function RouteForm({
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group hidden">
             <label>Маршрут на ЭтоМесто.РУ</label>
             <div className="link-input-wrapper">
               <input
@@ -287,49 +282,39 @@ function RouteForm({
 
           <div className="form-group">
             <label>Место старта</label>
-            <select
+            <input
+              type="text"
               name="startLocation"
               value={formData.startLocation}
               onChange={handleInputChange}
-              className="location-select"
-            >
-              <option value="">Выбрать...</option>
-              <option value="Стадион УрФУ (г.Екатеринбург)">
-                Стадион УрФУ (г.Екатеринбург)
-              </option>
-            </select>
+              className="location-input"
+              placeholder="Введите..."
+            />
           </div>
 
           <div className="form-group">
             <label>Место финиша</label>
-            <select
+            <input
+              type="text"
               name="finishLocation"
               value={formData.finishLocation}
               onChange={handleInputChange}
-              className="location-select"
-            >
-              <option value="">Выбрать...</option>
-              <option value="Стадион УрФУ (г.Екатеринбург)">
-                Стадион УрФУ (г.Екатеринбург)
-              </option>
-            </select>
+              className="location-input"
+              placeholder="Введите..."
+            />
           </div>
 
           <div className="form-group">
             <label>Год проведения</label>
-            <select
+            <input
+              type="text"
               name="year"
-              value={formData.year}
+              value={formData.year || new Date().getFullYear().toString()}
               onChange={handleInputChange}
-              className="year-select"
-            >
-              <option value="">Выбрать...</option>
-              {Array.from({ length: 15 }, (_, i) => 2010 + i).map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
+              className="year-input"
+              placeholder="Введите..."
+              maxLength={4}
+            />
           </div>
         </div>
 
@@ -345,7 +330,7 @@ function RouteForm({
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group hidden">
             <label>Время старта</label>
             <div className="time-input-wrapper">
               <span className="time-label">С</span>
@@ -377,7 +362,7 @@ function RouteForm({
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group hidden">
             <label>Время финиша</label>
             <div className="time-input-wrapper">
               <span className="time-label">С</span>
