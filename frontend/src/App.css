@@ -444,7 +444,7 @@ details summary::-webkit-details-marker {
   -moz-appearance: none;
   width: 20px;
   height: 20px;
-  background-image: url("/checkbox-off.svg");
+  background-image: url("/images/checkbox-off.svg");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -455,7 +455,7 @@ details summary::-webkit-details-marker {
 }
 
 .checkbox-line input[type="checkbox"]:checked {
-  background-image: url("/checkbox-on.svg");
+  background-image: url("/images/checkbox-on.svg");
 }
 
 .checkbox-line.inline {
@@ -604,7 +604,7 @@ details.small summary {
   width: calc(100% - 2 * 40px);
   margin: 0 40px;
   min-height: 85vh;
-  background-image: url("/background-white-map.svg");
+  background-image: url("/images/background-white-map.svg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -851,7 +851,7 @@ details.small summary {
   -moz-appearance: none;
   width: 25px;
   height: 25px;
-  background-image: url("/radio-off.svg");
+  background-image: url("/images/radio-off.svg");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -860,7 +860,7 @@ details.small summary {
 }
 
 .radio-line input[type="radio"]:checked {
-  background-image: url("/radio-on.svg");
+  background-image: url("/images/radio-on.svg");
 }
 
 .control-points-list {
