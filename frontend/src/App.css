@@ -7,6 +7,10 @@
   font-style: normal;
 }
 
+.hidden {
+  display: none;
+}
+
 .bebas {
   font-family: "Bebas Neue", sans-serif;
   font-weight: 400;
@@ -808,14 +812,13 @@ details.small summary {
   gap: 8px;
 }
 
-.distance-select {
+.distance-input {
   flex: 1;
   padding: 10px 12px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   font-size: 16px;
   background: #fff;
-  cursor: pointer;
   outline: none;
 }
 
@@ -952,15 +955,13 @@ details.small summary {
   height: 25px;
 }
 
-.location-select,
-.year-select {
+.form-group input {
   width: 100%;
   padding: 10px 12px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   font-size: 16px;
   background: #fff;
-  cursor: pointer;
   outline: none;
 }
 
