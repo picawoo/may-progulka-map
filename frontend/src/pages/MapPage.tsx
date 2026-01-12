@@ -295,7 +295,7 @@ function MapPage() {
                     onClick={() => setIsFiltersCollapsed(true)}
                     aria-label="Свернуть фильтры"
                   >
-                    <img src="/minimize-arrow.svg" alt="" />
+                    <img src="/images/minimize-arrow.svg" alt="" />
                   </button>
                 </div>
 
@@ -455,7 +455,7 @@ function MapPage() {
                     onClick={() => setIsRoutesCollapsed(true)}
                     aria-label="Свернуть маршруты"
                   >
-                    <img src="/minimize-arrow.svg" alt="" />
+                    <img src="/images/minimize-arrow.svg" alt="" />
                   </button>
                   <h3>Маршруты</h3>
                 </div>

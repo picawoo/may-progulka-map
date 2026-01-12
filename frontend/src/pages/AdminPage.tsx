@@ -152,7 +152,11 @@ function AdminPage() {
               <div className="admin-routes-layout">
                 <div className="admin-sidebar">
                   <div className="admin-search">
-                    <img src="/search.svg" alt="" className="search-icon" />
+                    <img
+                      src="/images/search.svg"
+                      alt=""
+                      className="search-icon"
+                    />
                     <input
                       type="text"
                       placeholder="Поиск"

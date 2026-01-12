@@ -45,9 +45,7 @@ function RouteForm({
         startTimeTo: route.startTime || "13:00",
         finishTimeFrom: route.finishTime || "12:00",
         finishTimeTo: route.finishTime || "21:00",
-        year: route.date
-          ? new Date(route.date).getFullYear().toString()
-          : "",
+        year: route.date ? new Date(route.date).getFullYear().toString() : "",
         description: route.description || "",
         tropinkiLink: "",
         etomestoLink: "",
@@ -112,7 +110,7 @@ function RouteForm({
       address: "",
       coord: { lat: 0, lng: 0 },
     };
-    
+
     onSubmit({
       distanceKm: Number(formData.distanceKm),
       walkType: formData.walkType,
@@ -141,7 +139,7 @@ function RouteForm({
                 style={{ display: "none" }}
               />
               <label htmlFor="gpx-file" className="file-upload-label">
-                <img src="/upload-button.svg" alt="" />
+                <img src="/images/upload-button.svg" alt="" />
                 <span>Выбрать файл</span>
               </label>
             </div>
@@ -238,7 +236,7 @@ function RouteForm({
                     className="control-point-remove"
                     aria-label="Удалить контрольный пункт"
                   >
-                    <img src="/remove-button.svg" alt="" />
+                    <img src="/images/remove-button.svg" alt="" />
                   </button>
                 </div>
               ))}
@@ -247,7 +245,7 @@ function RouteForm({
                 onClick={handleAddControlPoint}
                 className="control-point-add"
               >
-                <img src="/add-button.svg" alt="" />
+                <img src="/images/add-button.svg" alt="" />
               </button>
             </div>
           </div>
@@ -267,7 +265,7 @@ function RouteForm({
                 style={{ display: "none" }}
               />
               <label htmlFor="kml-file" className="file-upload-label">
-                <img src="/upload-button.svg" alt="" />
+                <img src="/images/upload-button.svg" alt="" />
                 <span>Выбрать файл</span>
               </label>
             </div>
@@ -428,4 +426,3 @@ function RouteForm({
 }
 
 export default RouteForm;
-

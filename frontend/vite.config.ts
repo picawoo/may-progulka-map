@@ -18,4 +18,18 @@ export default defineConfig({
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => {
+          // Картинки в отдельную директорию images
+          if (assetInfo.name && /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(assetInfo.name)) {
+            return "images/[name][extname]";
+          }
+          // Остальные ассеты в assets
+          return "assets/[name]-[hash][extname]";
+        },
+      },
+    },
+  },
 });
