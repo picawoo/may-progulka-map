@@ -1,30 +1,23 @@
 services:
   db:
-    image: postgis/postgis:16-3.4
+    image: postgres:16-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U maywalk_user -d maywalk_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    environment:
+      - POSTGRES_DB=mayprogulka
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=secret_pass
 
   web:
     build: .
+    # Команды теперь выполняются относительно /app/src (из-за WORKDIR в Dockerfile)
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - ./src:/app/src
-      - ./gpx_data:/app/gpx_data
+      - .:/app  # Пробрасываем всю папку backend
     ports:
       - "8000:8000"
-    env_file:
-      - .env
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
 volumes:
   postgres_data:
