@@ -1,14 +1,18 @@
 from django.contrib import admin
-from django.conf import settings
-from django.conf.urls.static import static
-from django.urls import path
-from routes.views import RouteListAPIView
+from django.urls import path, include
+from routes.views import RouteViewSet
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+
+router = DefaultRouter()
+router.register(r'routes', RouteViewSet)
 
 urlpatterns = [
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('admin/', admin.site.urls),
-    path('api/routes/', RouteListAPIView.as_view(), name='route-list'),
+    path('api/', include(router.urls)),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

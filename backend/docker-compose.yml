@@ -10,10 +10,9 @@ services:
 
   web:
     build: .
-    # Команды теперь выполняются относительно /app/src (из-за WORKDIR в Dockerfile)
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - .:/app  # Пробрасываем всю папку backend
+      - .:/app
     ports:
       - "8000:8000"
     depends_on:
