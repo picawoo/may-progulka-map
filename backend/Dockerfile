@@ -1,22 +1,16 @@
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y \
-    binutils \
-    libproj-dev \
-    gdal-bin \
-    libgdal-dev \
-    python3-gdal \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libpq-dev build-essential && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./src /app/src
-WORKDIR /app/src
+COPY . .
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONPATH=/app
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
