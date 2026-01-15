@@ -172,9 +172,7 @@ function AdminPage() {
       }
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Ошибка при сохранении маршрута."
+        err instanceof Error ? err.message : "Ошибка при сохранении маршрута."
       );
       console.error("Failed to save route:", err);
     }
@@ -182,6 +180,7 @@ function AdminPage() {
 
   const handleFormCancel = () => {
     setSelectedRoute(null);
+    setActiveTab("routes");
   };
 
   const handleDeleteRoute = async (routeId: string) => {
@@ -201,9 +200,7 @@ function AdminPage() {
       }
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Ошибка при удалении маршрута."
+        err instanceof Error ? err.message : "Ошибка при удалении маршрута."
       );
       console.error("Failed to delete route:", err);
     }
@@ -270,7 +267,7 @@ function AdminPage() {
               <div className="admin-routes-layout">
                 <div className="admin-sidebar">
                   <button
-                    className="btn-primary"
+                    className="btn-primary hidden"
                     onClick={handleBulkImport}
                     disabled={isBulkImporting}
                     style={{ marginBottom: "1rem", width: "100%" }}
@@ -300,26 +297,24 @@ function AdminPage() {
                       </div>
                     ) : filteredRoutes.length === 0 ? (
                       <div style={{ padding: "2rem", textAlign: "center" }}>
-                        {searchQuery
-                          ? "Маршруты не найдены"
-                          : "Нет маршрутов"}
+                        {searchQuery ? "Маршруты не найдены" : "Нет маршрутов"}
                       </div>
                     ) : (
                       filteredRoutes.map((route) => (
-                      <div
-                        key={route.id}
-                        className={`route-item-admin ${
-                          selectedRoute?.id === route.id ? "selected" : ""
-                        }`}
-                        onClick={() => handleRouteSelect(route)}
-                      >
-                        {new Date(route.date).toLocaleDateString("ru-RU", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                        })}{" "}
-                        ({route.distanceKm} км)
-                      </div>
+                        <div
+                          key={route.id}
+                          className={`route-item-admin ${
+                            selectedRoute?.id === route.id ? "selected" : ""
+                          }`}
+                          onClick={() => handleRouteSelect(route)}
+                        >
+                          {new Date(route.date).toLocaleDateString("ru-RU", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                          })}{" "}
+                          ({route.distanceKm} км)
+                        </div>
                       ))
                     )}
                   </div>

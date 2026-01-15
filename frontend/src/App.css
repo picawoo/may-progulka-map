@@ -425,9 +425,14 @@ details summary::-webkit-details-marker {
   gap: 6px;
 }
 
-.dropdown.small .dropdown-list a {
+.dropdown.small .dropdown-list button {
   color: #fff;
   text-decoration: none;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
 }
 
 .dropdown-actions {
@@ -965,7 +970,8 @@ details.small summary {
   height: 25px;
 }
 
-.form-group input {
+.form-group input[type="text"],
+.form-group input[type="date"] {
   width: 100%;
   padding: 10px 12px;
   border: 2px solid #e0e0e0;
