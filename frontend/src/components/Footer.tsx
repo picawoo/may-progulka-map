@@ -11,7 +11,7 @@ function Footer() {
         <div className="footer-logo">
           <img src={footerLogo} alt="Майская прогулка" />
         </div>
-        <div className="footer-copyright">© 2015–2024</div>
+        <div className="footer-copyright">© 2015–2026</div>
 
         <div className="footer-links footer-links-social">
           <div className="footer-links-title">Следите за нами в соцсетях</div>
@@ -41,10 +41,7 @@ function Footer() {
             <img src={footerPhone} alt="Телефон" />
             <span className="sr-only">+7 (343) 290-60-17</span>
           </a>
-          <a
-            className="footer-links-link"
-            href="mailto:mayprogulka@yandex.ru"
-          >
+          <a className="footer-links-link" href="mailto:mayprogulka@yandex.ru">
             <img src={footerEmail} alt="Email" />
             <span className="sr-only">mayprogulka@yandex.ru</span>
           </a>
@@ -55,4 +52,3 @@ function Footer() {
 }
 
 export default Footer;
-

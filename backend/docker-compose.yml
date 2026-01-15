@@ -18,5 +18,17 @@ services:
     depends_on:
       - db
 
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        # Используем localhost для браузера, так как запросы идут от клиента
+        VITE_API_BASE_URL: http://localhost:8000/api
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+
 volumes:
   postgres_data:

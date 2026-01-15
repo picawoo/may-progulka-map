@@ -124,6 +124,16 @@ img {
   display: block;
 }
 
+.map-page-title {
+  font-size: 42px;
+  font-weight: 700;
+  color: #1e1e1e;
+  text-align: center;
+  margin: 40px 0;
+  padding: 0 40px;
+  font-family: "Unbounded", sans-serif;
+}
+
 footer {
   background-color: #ef8b6e;
   height: 190px;

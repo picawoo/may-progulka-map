@@ -10,9 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@pbe/react-yandex-maps": "^1.2.5",
+    "@mr-igorinni/react-yandex-maps-fork": "^1.2.6-react19",
     "@react-google-maps/api": "^2.20.7",
     "@types/google.maps": "^3.58.1",
+    "axios": "^1.7.9",
     "rc-slider": "^11.1.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

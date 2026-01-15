@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import type { RouteItem, WalkType } from "../data/mockRoutes";
+import { routesApi } from "../api/routes";
 
 type RouteFormProps = {
   route?: RouteItem;
   onSubmit: (data: Partial<RouteItem>) => void;
   onCancel?: () => void;
+  onDelete?: (routeId: string) => void;
   submitButtonText?: string;
 };
 
@@ -12,9 +14,11 @@ function RouteForm({
   route,
   onSubmit,
   onCancel,
+  onDelete,
   submitButtonText = "Загрузить маршрут",
 }: RouteFormProps) {
   const [formData, setFormData] = useState({
+    name: route?.title || "",
     distanceKm: route?.distanceKm || "",
     walkType: (route?.walkType || "walk") as WalkType,
     startLocation: route?.startLocation.name || "",
@@ -28,15 +32,17 @@ function RouteForm({
     tropinkiLink: "",
     etomestoLink: "",
     controlPoints: route?.controlPoints || [],
+    track: route?.track || [],
   });
 
-  // Файлы будут использованы в будущем для загрузки
-  // const [gpxFile, setGpxFile] = useState<File | null>(null);
-  // const [kmlFile, setKmlFile] = useState<File | null>(null);
+  const [gpxFile, setGpxFile] = useState<File | null>(null);
+  const [isParsingGpx, setIsParsingGpx] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
 
   useEffect(() => {
     if (route) {
       setFormData({
+        name: route.title || "",
         distanceKm: route.distanceKm || "",
         walkType: route.walkType || "walk",
         startLocation: route.startLocation.name || "",
@@ -50,6 +56,7 @@ function RouteForm({
         tropinkiLink: "",
         etomestoLink: "",
         controlPoints: route.controlPoints || [],
+        track: route.track || [],
       });
     }
   }, [route]);
@@ -101,24 +108,70 @@ function RouteForm({
     }));
   };
 
+  const handleGpxFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setGpxFile(file);
+    setParseError(null);
+    setIsParsingGpx(true);
+
+    try {
+      const parsed = await routesApi.parseGpx(file);
+      // Заполняем форму данными из парсинга
+      setFormData((prev) => ({
+        ...prev,
+        distanceKm: parsed.distanceKm,
+        track: parsed.points,
+        startLocation: prev.startLocation || parsed.name,
+      }));
+      // Если название не задано, используем название из файла
+      if (!route) {
+        // Можно добавить поле title в форму, если нужно
+      }
+    } catch (err) {
+      setParseError(
+        err instanceof Error
+          ? err.message
+          : "Ошибка при парсинге GPX файла."
+      );
+      console.error("Failed to parse GPX:", err);
+    } finally {
+      setIsParsingGpx(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Находим существующую локацию из mockRoutes или создаем новую
-    const existingRoute = route;
-    const startLocationObj = existingRoute?.startLocation || {
-      name: formData.startLocation || "",
-      address: "",
-      coord: { lat: 0, lng: 0 },
+
+    // Определяем координаты старта из трека или существующего маршрута
+    const startCoord =
+      formData.track.length > 0
+        ? formData.track[0]
+        : route?.startLocation.coord || { lat: 0, lng: 0 };
+
+    const startLocationObj = {
+      name: formData.startLocation || route?.startLocation.name || "",
+      address: route?.startLocation.address || "",
+      coord: startCoord,
     };
 
+    // Формируем дату из года
+    const date = formData.year
+      ? `${formData.year}-05-15`
+      : route?.date || new Date().toISOString().split("T")[0];
+
     onSubmit({
-      distanceKm: Number(formData.distanceKm),
+      title: formData.name || route?.title || `Маршрут ${date}`,
+      date,
+      distanceKm: Number(formData.distanceKm) || 0,
       walkType: formData.walkType,
-      startTime: formData.startTimeFrom,
-      finishTime: formData.finishTimeFrom,
+      startTime: formData.startTimeFrom || "",
+      finishTime: formData.finishTimeFrom || "",
       startLocation: startLocationObj,
-      description: formData.description,
+      description: formData.description || "",
       controlPoints: formData.controlPoints,
+      track: formData.track,
     });
   };
 
@@ -133,16 +186,32 @@ function RouteForm({
                 type="file"
                 id="gpx-file"
                 accept=".gpx"
-                onChange={() => {
-                  // Обработка файла будет добавлена позже
-                }}
+                onChange={handleGpxFileChange}
+                disabled={isParsingGpx}
                 style={{ display: "none" }}
               />
               <label htmlFor="gpx-file" className="file-upload-label">
                 <img src="/images/upload-button.svg" alt="" />
-                <span>Выбрать файл</span>
+                <span>
+                  {isParsingGpx
+                    ? "Парсинг файла..."
+                    : gpxFile
+                    ? gpxFile.name
+                    : "Выбрать файл"}
+                </span>
               </label>
             </div>
+            {parseError && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  color: "#d32f2f",
+                  fontSize: "0.875rem",
+                }}
+              >
+                {parseError}
+              </div>
+            )}
           </div>
 
           <div className="form-group hidden">
@@ -281,6 +350,18 @@ function RouteForm({
           </div>
 
           <div className="form-group">
+            <label>Название</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="location-input"
+              placeholder="Введите..."
+            />
+          </div>
+
+          <div className="form-group">
             <label>Место старта</label>
             <input
               type="text"
@@ -400,6 +481,16 @@ function RouteForm({
         {onCancel && (
           <button type="button" onClick={onCancel} className="btn-cancel">
             Отмена
+          </button>
+        )}
+        {route?.id && onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(route.id)}
+            className="btn-cancel"
+            style={{ backgroundColor: "#d32f2f", color: "white" }}
+          >
+            Удалить маршрут
           </button>
         )}
         <button type="submit" className="btn-submit">

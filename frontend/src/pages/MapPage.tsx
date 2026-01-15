@@ -3,14 +3,13 @@ import {
   Map as YMap,
   Polyline as YPolyline,
   YMaps,
-} from "@pbe/react-yandex-maps";
-import { useMemo, useState } from "react";
+} from "@mr-igorinni/react-yandex-maps-fork";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
 
-import bannerImage from "../assets/mayp2025_3.png";
-import { mockRoutes } from "../data/mockRoutes";
 import type { RouteItem, WalkType } from "../data/mockRoutes";
+import { routesApi } from "../api/routes";
 
 type EnvSource = { env?: Record<string, string | undefined> };
 
@@ -45,7 +44,31 @@ function MapPage() {
     googleMapsApiKey: googleApiKey,
   });
 
-  const routes: RouteItem[] = useMemo(() => mockRoutes, []);
+  const [routes, setRoutes] = useState<RouteItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadRoutes = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await routesApi.getAll();
+        setRoutes(data);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Ошибка загрузки маршрутов. Попробуйте обновить страницу."
+        );
+        console.error("Failed to load routes:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRoutes();
+  }, []);
 
   const years = useMemo(
     () =>
@@ -58,7 +81,7 @@ function MapPage() {
       Array.from(
         new Set(
           routes.map(
-            (r) => `${r.startLocation.name} (${r.startLocation.address})`
+            (r) => `${r.startLocation.name}${r.startLocation.address ? ` (${r.startLocation.address})` : ""}`
           )
         )
       ),
@@ -86,7 +109,7 @@ function MapPage() {
   const filteredRoutes = useMemo(() => {
     return routes.filter((route) => {
       const year = String(new Date(route.date).getFullYear());
-      const start = `${route.startLocation.name} (${route.startLocation.address})`;
+      const start = `${route.startLocation.name}${route.startLocation.address ? ` (${route.startLocation.address})` : ""}`;
       const byYear =
         appliedFilters.years.length === 0 ||
         appliedFilters.years.includes(year);
@@ -103,10 +126,119 @@ function MapPage() {
     });
   }, [appliedFilters, routes]);
 
+  // Вычисляем границы всех отфильтрованных маршрутов
+  const bounds = useMemo(() => {
+    if (filteredRoutes.length === 0) {
+      return null;
+    }
+
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    let minLng = Infinity;
+    let maxLng = -Infinity;
+    let hasValidPoints = false;
+
+    filteredRoutes.forEach((route) => {
+      // Проверяем, что track существует и не пустой
+      if (route.track && Array.isArray(route.track) && route.track.length > 0) {
+        route.track.forEach((point) => {
+          if (point && typeof point.lat === 'number' && typeof point.lng === 'number') {
+            minLat = Math.min(minLat, point.lat);
+            maxLat = Math.max(maxLat, point.lat);
+            minLng = Math.min(minLng, point.lng);
+            maxLng = Math.max(maxLng, point.lng);
+            hasValidPoints = true;
+          }
+        });
+      }
+    });
+
+    // Если нет валидных точек, возвращаем null
+    if (!hasValidPoints || minLat === Infinity) {
+      return null;
+    }
+
+    // Добавляем небольшой отступ
+    const latPadding = (maxLat - minLat) * 0.1 || 0.01;
+    const lngPadding = (maxLng - minLng) * 0.1 || 0.01;
+
+    return {
+      minLat: minLat - latPadding,
+      maxLat: maxLat + latPadding,
+      minLng: minLng - lngPadding,
+      maxLng: maxLng + lngPadding,
+    };
+  }, [filteredRoutes]);
+
   const firstCenter = useMemo(() => {
+    if (bounds) {
+      return {
+        lat: (bounds.minLat + bounds.maxLat) / 2,
+        lng: (bounds.minLng + bounds.maxLng) / 2,
+      };
+    }
     const base = routes[0]?.startLocation.coord;
     return base || { lat: 56.8389, lng: 60.6057 };
-  }, [routes]);
+  }, [bounds, routes]);
+
+  // Refs для карт
+  const googleMapRef = useRef<google.maps.Map | null>(null);
+  const yandexMapRef = useRef<{ setBounds: (bounds: number[][], options?: { duration?: number }) => void } | null>(null);
+
+  // Функция для установки границ на Google Maps
+  const fitGoogleMapBounds = useCallback(() => {
+    if (!googleMapRef.current || !bounds) return;
+
+    try {
+      const googleBounds = new google.maps.LatLngBounds();
+      googleBounds.extend(new google.maps.LatLng(bounds.minLat, bounds.minLng));
+      googleBounds.extend(new google.maps.LatLng(bounds.maxLat, bounds.maxLng));
+
+      googleMapRef.current.fitBounds(googleBounds);
+    } catch (error) {
+      console.error("Error fitting Google map bounds:", error);
+    }
+  }, [bounds]);
+
+  // Функция для установки границ на Yandex Maps
+  const fitYandexMapBounds = useCallback(() => {
+    if (!yandexMapRef.current || !bounds) return;
+
+    try {
+      yandexMapRef.current.setBounds(
+        [[bounds.minLat, bounds.minLng], [bounds.maxLat, bounds.maxLng]],
+        {
+          duration: 300,
+        }
+      );
+    } catch (error) {
+      console.error("Error setting Yandex map bounds:", error);
+    }
+  }, [bounds]);
+
+  // Автоматически подстраиваем карту при изменении отфильтрованных маршрутов
+  useEffect(() => {
+    if (filteredRoutes.length === 0 || !bounds || isLoading) return;
+
+    // Небольшая задержка для инициализации карты
+    const timer = setTimeout(() => {
+      if (mapProvider === "google" && googleMapRef.current && bounds) {
+        try {
+          fitGoogleMapBounds();
+        } catch (error) {
+          console.error("Error fitting Google map bounds:", error);
+        }
+      } else if (mapProvider === "yandex" && yandexMapRef.current && bounds) {
+        try {
+          fitYandexMapBounds();
+        } catch (error) {
+          console.error("Error fitting Yandex map bounds:", error);
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [filteredRoutes, mapProvider, bounds, isLoading, fitGoogleMapBounds, fitYandexMapBounds]);
 
   const applyFilters = () => {
     setAppliedFilters({
@@ -138,28 +270,35 @@ function MapPage() {
     }
   };
 
+  const onGoogleMapLoad = useCallback((map: google.maps.Map) => {
+    googleMapRef.current = map;
+  }, []);
+
   const renderGoogleMap = () => (
     <GoogleMap
       mapContainerClassName="map-canvas"
       center={firstCenter}
       zoom={13}
+      onLoad={onGoogleMapLoad}
       options={{
         streetViewControl: false,
         mapTypeControl: false,
         fullscreenControl: false,
       }}
     >
-      {filteredRoutes.map((route) => (
-        <Polyline
-          key={route.id}
-          path={route.track}
-          options={{
-            strokeColor: route.color,
-            strokeOpacity: 0.9,
-            strokeWeight: 5,
-          }}
-        />
-      ))}
+      {filteredRoutes
+        .filter((route) => route.track && route.track.length > 0)
+        .map((route) => (
+          <Polyline
+            key={route.id}
+            path={route.track}
+            options={{
+              strokeColor: route.color,
+              strokeOpacity: 0.9,
+              strokeWeight: 5,
+            }}
+          />
+        ))}
       {/*
       Маркеры точек траекторий 
       {filteredRoutes.map((route) => (
@@ -191,18 +330,25 @@ function MapPage() {
           zoom: 13,
           controls: [],
         }}
+        instanceRef={(ref: unknown) => {
+          if (ref && typeof ref === 'object' && 'setBounds' in ref) {
+            yandexMapRef.current = ref as { setBounds: (bounds: number[][], options?: { duration?: number }) => void };
+          }
+        }}
       >
-        {filteredRoutes.map((route) => (
-          <YPolyline
-            key={route.id}
-            geometry={route.track.map((p) => [p.lat, p.lng])}
-            options={{
-              strokeColor: route.color,
-              strokeOpacity: 0.9,
-              strokeWidth: 5,
-            }}
-          />
-        ))}
+        {filteredRoutes
+          .filter((route) => route.track && route.track.length > 0)
+          .map((route) => (
+            <YPolyline
+              key={route.id}
+              geometry={route.track.map((p) => [p.lat, p.lng])}
+              options={{
+                strokeColor: route.color,
+                strokeOpacity: 0.9,
+                strokeWidth: 5,
+              }}
+            />
+          ))}
         {/*
         Маркеры точек траекторий
         {filteredRoutes.map((route) => (
@@ -232,18 +378,28 @@ function MapPage() {
   return (
     <>
       <div className="bodywrapper">
-        <div className="banner">
-          <img
-            className="banner-img"
-            src={bannerImage}
-            alt="Маршруты Майской прогулки 2025"
-          />
-        </div>
+        <h1 className="map-page-title">Карта маршрутов майской прогулки</h1>
       </div>
 
       <div className="map-section">
         <div className="map-wrapper">
-          {mapProvider === "google" ? (
+          {isLoading ? (
+            <div className="map-placeholder">
+              Загрузка маршрутов...
+            </div>
+          ) : error ? (
+            <div className="map-placeholder">
+              <div style={{ color: "#d32f2f", marginBottom: "1rem" }}>
+                {error}
+              </div>
+              <button
+                className="btn-primary"
+                onClick={() => window.location.reload()}
+              >
+                Обновить страницу
+              </button>
+            </div>
+          ) : mapProvider === "google" ? (
             isGoogleLoaded ? (
               renderGoogleMap()
             ) : (
