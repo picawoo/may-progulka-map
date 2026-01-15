@@ -1,4 +1,5 @@
 import apiClient from "./client";
+import { createColorCycle } from "../utils";
 import type { RouteItem } from "../data/mockRoutes";
 
 // Типы для API
@@ -11,6 +12,11 @@ export interface ApiRoute {
   date: string; // Формат YYYY-MM-DD
   points?: Array<{ lat: number; lng: number }>;
   startLocation?: {
+    name?: string;
+    address?: string;
+    coord?: { lat: number; lng: number };
+  };
+  endLocation?: {
     name?: string;
     address?: string;
     coord?: { lat: number; lng: number };
@@ -29,15 +35,21 @@ export interface BulkImportResponse {
   errors: number;
 }
 
+// Цвет для маршрута
+const getNextColor = createColorCycle();
+
 // Маппинг из API формата в RouteItem
 const mapApiRouteToRouteItem = (apiRoute: ApiRoute): RouteItem => {
   const id = apiRoute.id?.toString() || `route-${Date.now()}`;
-  
-  // Безопасная обработка startLocation
+
   const startLocation = apiRoute.startLocation || {};
   const startLocationName = startLocation.name || "";
   const startLocationCoord = startLocation.coord || { lat: 0, lng: 0 };
-  
+
+  const finishLocation = apiRoute.endLocation || {};
+  const finishLocationName = finishLocation.name || "";
+  const finishLocationCoord = finishLocation.coord || { lat: 0, lng: 0 };
+
   return {
     id,
     title: apiRoute.name || "",
@@ -51,20 +63,23 @@ const mapApiRouteToRouteItem = (apiRoute: ApiRoute): RouteItem => {
       address: startLocation.address || "", // Пока пустое
       coord: startLocationCoord,
     },
+    finishLocation: {
+      name: finishLocationName,
+      address: finishLocation.address || "", // Пока пустое
+      coord: finishLocationCoord,
+    },
     description: apiRoute.description || "",
     checkpoints: "", // Пока пустое
     controlPoints: [], // Пока пустое
     track: apiRoute.points || [],
-    files: {
-      gpx: "", // Пока пустое
-      kml: "", // Пока пустое
-    },
-    color: "rgba(255, 128, 0, 0.5)", // Стандартный цвет
+    color: getNextColor(), // Стандартный цвет
   };
 };
 
 // Маппинг из RouteItem в API формат
-const mapRouteItemToApiRoute = (routeItem: Partial<RouteItem>): Partial<ApiRoute> => {
+const mapRouteItemToApiRoute = (
+  routeItem: Partial<RouteItem>
+): Partial<ApiRoute> => {
   return {
     name: routeItem.title || "",
     description: routeItem.description,
@@ -76,6 +91,15 @@ const mapRouteItemToApiRoute = (routeItem: Partial<RouteItem>): Partial<ApiRoute
       ? {
           name: routeItem.startLocation.name,
           coord: routeItem.startLocation.coord,
+        }
+      : {
+          name: "",
+          coord: { lat: 0, lng: 0 },
+        },
+    endLocation: routeItem.finishLocation
+      ? {
+          name: routeItem.finishLocation.name,
+          coord: routeItem.finishLocation.coord,
         }
       : {
           name: "",
@@ -97,6 +121,14 @@ export const routesApi = {
     return mapApiRouteToRouteItem(response.data);
   },
 
+  // Скачать GPX файл маршрута
+  getGpxById: async (id: number): Promise<Blob> => {
+    const response = await apiClient.get(`/routes/${id}/download/`, {
+      responseType: "blob",
+    });
+    return response.data;
+  },
+
   // Создать новый маршрут
   create: async (route: Partial<RouteItem>): Promise<RouteItem> => {
     const apiRoute = mapRouteItemToApiRoute(route);
@@ -107,7 +139,10 @@ export const routesApi = {
   // Обновить маршрут
   update: async (id: number, route: Partial<RouteItem>): Promise<RouteItem> => {
     const apiRoute = mapRouteItemToApiRoute(route);
-    const response = await apiClient.patch<ApiRoute>(`/routes/${id}/`, apiRoute);
+    const response = await apiClient.patch<ApiRoute>(
+      `/routes/${id}/`,
+      apiRoute
+    );
     return mapApiRouteToRouteItem(response.data);
   },
 

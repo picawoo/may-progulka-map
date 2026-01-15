@@ -22,12 +22,12 @@ function RouteForm({
     distanceKm: route?.distanceKm || "",
     walkType: (route?.walkType || "walk") as WalkType,
     startLocation: route?.startLocation.name || "",
-    finishLocation: route?.startLocation.name || "",
+    finishLocation: route?.finishLocation.name || "",
     startTimeFrom: route?.startTime || "11:00",
     startTimeTo: route?.startTime || "13:00",
     finishTimeFrom: route?.finishTime || "12:00",
     finishTimeTo: route?.finishTime || "21:00",
-    year: route?.date ? new Date(route.date).getFullYear().toString() : "",
+    date: route?.date || "",
     description: route?.description || "",
     tropinkiLink: "",
     etomestoLink: "",
@@ -46,12 +46,12 @@ function RouteForm({
         distanceKm: route.distanceKm || "",
         walkType: route.walkType || "walk",
         startLocation: route.startLocation.name || "",
-        finishLocation: route.startLocation.name || "",
+        finishLocation: route.finishLocation.name || "",
         startTimeFrom: route.startTime || "11:00",
         startTimeTo: route.startTime || "13:00",
         finishTimeFrom: route.finishTime || "12:00",
         finishTimeTo: route.finishTime || "21:00",
-        year: route.date ? new Date(route.date).getFullYear().toString() : "",
+        date: route.date || "",
         description: route.description || "",
         tropinkiLink: "",
         etomestoLink: "",
@@ -108,7 +108,9 @@ function RouteForm({
     }));
   };
 
-  const handleGpxFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGpxFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -123,7 +125,7 @@ function RouteForm({
         ...prev,
         distanceKm: parsed.distanceKm,
         track: parsed.points,
-        startLocation: prev.startLocation || parsed.name,
+        name: parsed.name,
       }));
       // Если название не задано, используем название из файла
       if (!route) {
@@ -131,9 +133,7 @@ function RouteForm({
       }
     } catch (err) {
       setParseError(
-        err instanceof Error
-          ? err.message
-          : "Ошибка при парсинге GPX файла."
+        err instanceof Error ? err.message : "Ошибка при парсинге GPX файла."
       );
       console.error("Failed to parse GPX:", err);
     } finally {
@@ -156,9 +156,15 @@ function RouteForm({
       coord: startCoord,
     };
 
+    const finishLocationObj = {
+      name: formData.finishLocation || route?.finishLocation.name || "",
+      address: route?.finishLocation.address || "",
+      coord: startCoord,
+    };
+
     // Формируем дату из года
-    const date = formData.year
-      ? `${formData.year}-05-15`
+    const date = formData.date
+      ? `${formData.date}`
       : route?.date || new Date().toISOString().split("T")[0];
 
     onSubmit({
@@ -169,6 +175,7 @@ function RouteForm({
       startTime: formData.startTimeFrom || "",
       finishTime: formData.finishTimeFrom || "",
       startLocation: startLocationObj,
+      finishLocation: finishLocationObj,
       description: formData.description || "",
       controlPoints: formData.controlPoints,
       track: formData.track,
@@ -317,25 +324,6 @@ function RouteForm({
 
         <div className="route-form-column">
           <div className="form-group hidden">
-            <label>Перетащите KML файл сюда</label>
-            <div className="file-upload-area">
-              <input
-                type="file"
-                id="kml-file"
-                accept=".kml"
-                onChange={() => {
-                  // Обработка файла будет добавлена позже
-                }}
-                style={{ display: "none" }}
-              />
-              <label htmlFor="kml-file" className="file-upload-label">
-                <img src="/images/upload-button.svg" alt="" />
-                <span>Выбрать файл</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="form-group hidden">
             <label>Маршрут на ЭтоМесто.РУ</label>
             <div className="link-input-wrapper">
               <input
@@ -386,15 +374,14 @@ function RouteForm({
           </div>
 
           <div className="form-group">
-            <label>Год проведения</label>
+            <label>Дата проведения</label>
             <input
-              type="text"
-              name="year"
-              value={formData.year || new Date().getFullYear().toString()}
+              type="date"
+              name="date"
+              value={formData.date}
               onChange={handleInputChange}
               className="year-input"
               placeholder="Введите..."
-              maxLength={4}
             />
           </div>
         </div>

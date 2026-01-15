@@ -1,3 +1,7 @@
+.hidden {
+  display: none;
+}
+
 .login-container {
   display: flex;
   justify-content: center;

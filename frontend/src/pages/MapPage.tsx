@@ -81,7 +81,10 @@ function MapPage() {
       Array.from(
         new Set(
           routes.map(
-            (r) => `${r.startLocation.name}${r.startLocation.address ? ` (${r.startLocation.address})` : ""}`
+            (r) =>
+              `${r.startLocation.name}${
+                r.startLocation.address ? ` (${r.startLocation.address})` : ""
+              }`
           )
         )
       ),
@@ -109,7 +112,9 @@ function MapPage() {
   const filteredRoutes = useMemo(() => {
     return routes.filter((route) => {
       const year = String(new Date(route.date).getFullYear());
-      const start = `${route.startLocation.name}${route.startLocation.address ? ` (${route.startLocation.address})` : ""}`;
+      const start = `${route.startLocation.name}${
+        route.startLocation.address ? ` (${route.startLocation.address})` : ""
+      }`;
       const byYear =
         appliedFilters.years.length === 0 ||
         appliedFilters.years.includes(year);
@@ -142,7 +147,11 @@ function MapPage() {
       // Проверяем, что track существует и не пустой
       if (route.track && Array.isArray(route.track) && route.track.length > 0) {
         route.track.forEach((point) => {
-          if (point && typeof point.lat === 'number' && typeof point.lng === 'number') {
+          if (
+            point &&
+            typeof point.lat === "number" &&
+            typeof point.lng === "number"
+          ) {
             minLat = Math.min(minLat, point.lat);
             maxLat = Math.max(maxLat, point.lat);
             minLng = Math.min(minLng, point.lng);
@@ -183,7 +192,9 @@ function MapPage() {
 
   // Refs для карт
   const googleMapRef = useRef<google.maps.Map | null>(null);
-  const yandexMapRef = useRef<{ setBounds: (bounds: number[][], options?: { duration?: number }) => void } | null>(null);
+  const yandexMapRef = useRef<{
+    setBounds: (bounds: number[][], options?: { duration?: number }) => void;
+  } | null>(null);
 
   // Функция для установки границ на Google Maps
   const fitGoogleMapBounds = useCallback(() => {
@@ -206,7 +217,10 @@ function MapPage() {
 
     try {
       yandexMapRef.current.setBounds(
-        [[bounds.minLat, bounds.minLng], [bounds.maxLat, bounds.maxLng]],
+        [
+          [bounds.minLat, bounds.minLng],
+          [bounds.maxLat, bounds.maxLng],
+        ],
         {
           duration: 300,
         }
@@ -238,7 +252,14 @@ function MapPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [filteredRoutes, mapProvider, bounds, isLoading, fitGoogleMapBounds, fitYandexMapBounds]);
+  }, [
+    filteredRoutes,
+    mapProvider,
+    bounds,
+    isLoading,
+    fitGoogleMapBounds,
+    fitYandexMapBounds,
+  ]);
 
   const applyFilters = () => {
     setAppliedFilters({
@@ -331,8 +352,13 @@ function MapPage() {
           controls: [],
         }}
         instanceRef={(ref: unknown) => {
-          if (ref && typeof ref === 'object' && 'setBounds' in ref) {
-            yandexMapRef.current = ref as { setBounds: (bounds: number[][], options?: { duration?: number }) => void };
+          if (ref && typeof ref === "object" && "setBounds" in ref) {
+            yandexMapRef.current = ref as {
+              setBounds: (
+                bounds: number[][],
+                options?: { duration?: number }
+              ) => void;
+            };
           }
         }}
       >
@@ -384,9 +410,7 @@ function MapPage() {
       <div className="map-section">
         <div className="map-wrapper">
           {isLoading ? (
-            <div className="map-placeholder">
-              Загрузка маршрутов...
-            </div>
+            <div className="map-placeholder">Загрузка маршрутов...</div>
           ) : error ? (
             <div className="map-placeholder">
               <div style={{ color: "#d32f2f", marginBottom: "1rem" }}>
@@ -416,7 +440,7 @@ function MapPage() {
             renderYandexMap()
           )}
 
-          <div className="map-overlay map-overlay-top">
+          <div className="map-overlay map-overlay-top hidden">
             <div className="map-card map-card-small">
               <span>Карта:</span>
               <div className="select map-provider-select">
@@ -647,14 +671,20 @@ function MapPage() {
                         </div>
                         <div className="route-meta">
                           <span>{route.startLocation.name}</span>
+                          <span>{route.finishLocation.name}</span>
                         </div>
                       </div>
                       <div className="route-buttons">
                         <details className="dropdown small">
                           <summary>Скачать</summary>
                           <div className="dropdown-list">
-                            <a href={route.files.gpx}>GPX</a>
-                            <a href={route.files.kml}>KML</a>
+                            <button
+                              onClick={() =>
+                                routesApi.getGpxById(parseInt(route.id))
+                              }
+                            >
+                              GPX
+                            </button>
                           </div>
                         </details>
                         <a className="btn-secondary" href="#more">
