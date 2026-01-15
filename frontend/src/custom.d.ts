@@ -1,1 +1,1 @@
-declare module "@pbe/react-yandex-maps";
+declare module "@mr-igorinni/react-yandex-maps-fork";

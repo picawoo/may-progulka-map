@@ -1,13 +1,21 @@
-import { useState, useMemo } from "react";
-import bannerImage from "../assets/mayp2025_3.png";
-import { mockRoutes } from "../data/mockRoutes";
+import { useState, useMemo, useEffect } from "react";
 import type { RouteItem } from "../data/mockRoutes";
 import RouteForm from "../components/RouteForm";
+import { routesApi } from "../api/routes";
 
 function AdminPage() {
   const [activeTab, setActiveTab] = useState<"routes" | "upload">("routes");
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [routes, setRoutes] = useState<RouteItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isBulkImporting, setIsBulkImporting] = useState(false);
+  const [bulkImportResult, setBulkImportResult] = useState<{
+    created: number;
+    skipped: number;
+    errors: number;
+  } | null>(null);
 
   const getRussianDate = useMemo(() => {
     const months = [
@@ -32,14 +40,56 @@ function AdminPage() {
     };
   }, []);
 
+  useEffect(() => {
+    loadRoutes();
+  }, []);
+
+  const loadRoutes = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await routesApi.getAll();
+      setRoutes(data);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ошибка загрузки маршрутов. Попробуйте обновить страницу."
+      );
+      console.error("Failed to load routes:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    try {
+      setIsBulkImporting(true);
+      setError(null);
+      const result = await routesApi.bulkImport();
+      setBulkImportResult(result);
+      // Перезагружаем список маршрутов после импорта
+      await loadRoutes();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ошибка при импорте маршрутов с сервера."
+      );
+      console.error("Failed to bulk import routes:", err);
+    } finally {
+      setIsBulkImporting(false);
+    }
+  };
+
   // Для обработки дат формата 18 мая 2025 и его вариаций
   const routesWithRussianDates = useMemo(
     () =>
-      mockRoutes.map((route) => ({
+      routes.map((route) => ({
         ...route,
         russianDate: getRussianDate(route.date).toLowerCase(),
       })),
-    [getRussianDate]
+    [routes, getRussianDate]
   );
 
   const filteredRoutes = routesWithRussianDates.filter((route) => {
@@ -102,29 +152,97 @@ function AdminPage() {
     setSelectedRoute(route);
   };
 
-  const handleFormSubmit = (data: Partial<RouteItem>) => {
-    console.log("Form submitted:", data);
+  const handleFormSubmit = async (data: Partial<RouteItem>) => {
+    try {
+      setError(null);
+      if (selectedRoute && selectedRoute.id) {
+        // Обновление существующего маршрута
+        const routeId = parseInt(selectedRoute.id);
+        if (!isNaN(routeId)) {
+          await routesApi.update(routeId, data);
+          await loadRoutes();
+          setSelectedRoute(null);
+        }
+      } else {
+        // Создание нового маршрута
+        await routesApi.create(data);
+        await loadRoutes();
+        setSelectedRoute(null);
+        setActiveTab("routes");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ошибка при сохранении маршрута."
+      );
+      console.error("Failed to save route:", err);
+    }
   };
 
   const handleFormCancel = () => {
     setSelectedRoute(null);
   };
 
+  const handleDeleteRoute = async (routeId: string) => {
+    if (!confirm("Вы уверены, что хотите удалить этот маршрут?")) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const id = parseInt(routeId);
+      if (!isNaN(id)) {
+        await routesApi.delete(id);
+        await loadRoutes();
+        if (selectedRoute?.id === routeId) {
+          setSelectedRoute(null);
+        }
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ошибка при удалении маршрута."
+      );
+      console.error("Failed to delete route:", err);
+    }
+  };
+
   return (
     <>
-      <div className="bodywrapper">
-        <div className="banner">
-          <img
-            className="banner-img"
-            src={bannerImage}
-            alt="Маршруты Майской прогулки 2025"
-          />
-        </div>
-      </div>
-
       <div className="admin-section">
         <div className="admin-wrapper">
           <h1 className="admin-title">Администрирование маршрутов</h1>
+
+          {error && (
+            <div
+              style={{
+                padding: "1rem",
+                marginBottom: "1rem",
+                backgroundColor: "#ffebee",
+                color: "#d32f2f",
+                borderRadius: "4px",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {bulkImportResult && (
+            <div
+              style={{
+                padding: "1rem",
+                marginBottom: "1rem",
+                backgroundColor: "#e8f5e9",
+                color: "#2e7d32",
+                borderRadius: "4px",
+              }}
+            >
+              Импорт завершен: создано {bulkImportResult.created}, пропущено{" "}
+              {bulkImportResult.skipped}, ошибок {bulkImportResult.errors}
+            </div>
+          )}
 
           <div className="admin-tabs">
             <button
@@ -151,6 +269,16 @@ function AdminPage() {
             {activeTab === "routes" ? (
               <div className="admin-routes-layout">
                 <div className="admin-sidebar">
+                  <button
+                    className="btn-primary"
+                    onClick={handleBulkImport}
+                    disabled={isBulkImporting}
+                    style={{ marginBottom: "1rem", width: "100%" }}
+                  >
+                    {isBulkImporting
+                      ? "Импорт..."
+                      : "Получить данные с сервера"}
+                  </button>
                   <div className="admin-search">
                     <img
                       src="/images/search.svg"
@@ -166,7 +294,18 @@ function AdminPage() {
                     />
                   </div>
                   <div className="routes-list-admin">
-                    {filteredRoutes.map((route) => (
+                    {isLoading ? (
+                      <div style={{ padding: "2rem", textAlign: "center" }}>
+                        Загрузка маршрутов...
+                      </div>
+                    ) : filteredRoutes.length === 0 ? (
+                      <div style={{ padding: "2rem", textAlign: "center" }}>
+                        {searchQuery
+                          ? "Маршруты не найдены"
+                          : "Нет маршрутов"}
+                      </div>
+                    ) : (
+                      filteredRoutes.map((route) => (
                       <div
                         key={route.id}
                         className={`route-item-admin ${
@@ -181,7 +320,8 @@ function AdminPage() {
                         })}{" "}
                         ({route.distanceKm} км)
                       </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
                 <div className="admin-form-area">
@@ -190,6 +330,7 @@ function AdminPage() {
                       route={selectedRoute}
                       onSubmit={handleFormSubmit}
                       onCancel={handleFormCancel}
+                      onDelete={handleDeleteRoute}
                       submitButtonText="Сохранить изменения"
                     />
                   ) : (

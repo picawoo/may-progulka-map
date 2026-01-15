@@ -39,6 +39,12 @@ class Route(models.Model):
         blank=True,
         verbose_name="Место старта"
     )
+    
+    endLocation = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Место финиша"
+    )
 
     points = models.JSONField(
         default=list,
