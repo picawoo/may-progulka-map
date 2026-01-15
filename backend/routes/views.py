@@ -1,13 +1,12 @@
-from django.utils import timezone
-from rest_framework import viewsets, permissions, status
+import json
+
+from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-import gpxpy
-import re
+import os
 from .models import Route
 from .serializers import RouteSerializer
-from .services import get_smart_location_name
-
+from .services import process_gpx_file
 
 class RouteViewSet(viewsets.ModelViewSet):
     queryset = Route.objects.all()
@@ -19,67 +18,88 @@ class RouteViewSet(viewsets.ModelViewSet):
     def parse_gpx(self, request):
         file = request.FILES.get('file')
         if not file:
-            return Response({'error': 'Файл не прикреплен'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Файл не прикреплен'}, status=400)
 
         try:
             file.seek(0)
-            gpx = gpxpy.parse(file)
-
-            file_name = file.name
-            year_match = re.search(r'\d{4}', file_name)
-
-            if year_match:
-                parsed_year = year_match.group()
-                parsed_date = f"{parsed_year}-05-19"
-            else:
-                parsed_date = timezone.now().date().isoformat()
-
-            points = []
-            for track in gpx.tracks:
-                for segment in track.segments:
-                    for p in segment.points:
-                        points.append({'lat': p.latitude, 'lng': p.longitude})
-
-            dist = round(gpx.length_2d() / 1000, 1) if gpx.tracks else 0
-
-            start_coord = points[0] if points else None
-            end_coord = points[-1] if points else None
-
-            start_location = {
-                "name": get_smart_location_name(start_coord, "Точка старта"),
-                "coord": start_coord or {}
-            }
-
-            end_location = {
-                "name": get_smart_location_name(end_coord, "Точка финиша"),
-                "coord": end_coord or {}
-            }
-
-            return Response({
-                'distanceKm': dist,
-                'points': points,
-                'name': file.name.replace('.gpx', ''),
-                'date': parsed_date,
-                'startLocation': start_location,
-                'endLocation': end_location,
-            })
+            result = process_gpx_file(file, file.name)
+            return Response(result)
         except Exception as e:
-            return Response({'error': f'Ошибка парсинга: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=400)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def bulk_import(self, request): # массовый импорт из папки
-        from .services import run_gpx_import
+    def bulk_import(self, request):
+        folder_path = '/app/gpx_data'
+        stats = {'created': 0, 'skipped': 0, 'errors': 0}
 
-        folder_path = '/app/gpx_data' # путь откуда брать файлы
+        if not os.path.exists(folder_path):
+            return Response({'error': f'Папка {folder_path} не найдена'}, status=404)
 
-        try:
-            stats = run_gpx_import(folder_path, overwrite=False)
-            return Response({
-                'status': 'success',
-                'message': 'Импорт завершен',
-                'created': stats['created'],
-                'skipped': stats['skipped'],
-                'errors': stats['errors']
-            })
-        except Exception as e:
-            return Response({'status': 'error', 'message': str(e)}, status=500)
+        from .models import Route
+
+        all_routes = list(Route.objects.all())
+
+        for filename in os.listdir(folder_path):
+            if filename.lower().endswith('.gpx'):
+                try:
+                    full_path = os.path.join(folder_path, filename)
+                    with open(full_path, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
+                        data = process_gpx_file(file_content, filename)
+
+                        curr_date = str(data['date'])
+                        curr_dist = round(float(data['distanceKm']), 1)
+                        curr_s = data.get('startLocation', {}).get('coord', {})
+                        curr_lat = float(curr_s.get('lat', 0))
+                        curr_lng = float(curr_s.get('lng', 0))
+
+                        is_duplicate = False
+
+                        for dupe in all_routes:
+                            db_date = str(dupe.date)
+                            db_dist = round(float(dupe.distanceKm), 1)
+
+                            s_data = dupe.startLocation
+                            if isinstance(s_data, str):
+                                s_data = json.loads(s_data)
+
+                            d_s = s_data.get('coord', {})
+                            db_lat = float(d_s.get('lat', 0))
+                            db_lng = float(d_s.get('lng', 0))
+
+                            date_match = (db_date == curr_date)
+                            dist_match = (db_dist == curr_dist)
+                            coord_match = (abs(db_lat - curr_lat) < 0.001 and abs(db_lng - curr_lng) < 0.001)
+
+                            if date_match and dist_match and coord_match:
+                                is_duplicate = True
+                                break
+
+                        if is_duplicate:
+                            print(f"--- [SKIP] {filename} уже есть")
+                            stats['skipped'] += 1
+                            continue
+
+                        new_obj = Route.objects.create(
+                            name=data['name'],
+                            distanceKm=data['distanceKm'],
+                            points=data['points'],
+                            date=data['date'],
+                            startLocation=data['startLocation'],
+                            endLocation=data['endLocation']
+                        )
+                        all_routes.append(new_obj)
+                        stats['created'] += 1
+                        print(f"+++ [NEW] {filename} добавлен")
+
+                except Exception as e:
+                    print(f"!!! Ошибка {filename}: {e}")
+                    stats['errors'] += 1
+
+        return Response({
+            'status': 'success',
+            'message': 'Импорт завершен',
+            'created': stats['created'],
+            'skipped': stats['skipped'],
+            'errors': stats['errors']
+        })
