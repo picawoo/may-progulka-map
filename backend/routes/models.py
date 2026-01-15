@@ -54,3 +54,8 @@ class Route(models.Model):
 
     def __str__(self):
         return f"{self.date.year} - {self.name} ({self.distanceKm} км)"
+
+    class Meta:
+        ordering = ['-date', '-id']
+        verbose_name = "Маршрут"
+        verbose_name_plural = "Маршруты"
