@@ -18,16 +18,6 @@
  <name><![CDATA[МП2023_СТАРТ]]></name>
 </wpt>
 <trk>
- <name><![CDATA[60° 40' 00" E]]></name>
- <trkseg>
-  <trkpt lat="56.79931933" lon="60.66666667"></trkpt>
-  <trkpt lat="56.80567828" lon="60.66666667"></trkpt>
-  <trkpt lat="56.82511629" lon="60.66666667"></trkpt>
-  <trkpt lat="56.84455430" lon="60.66666667"></trkpt>
-  <trkpt lat="56.85103363" lon="60.66666667"></trkpt>
- </trkseg>
-</trk>
-<trk>
  <name><![CDATA[Маршрут 20 км]]></name>
  <trkseg>
   <trkpt lat="56.84598249" lon="60.60145861"></trkpt>
