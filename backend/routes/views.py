@@ -1,7 +1,9 @@
+from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 import gpxpy
+import re
 from .models import Route
 from .serializers import RouteSerializer
 from .services import get_smart_location_name
@@ -20,7 +22,18 @@ class RouteViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Файл не прикреплен'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            file.seek(0)
             gpx = gpxpy.parse(file)
+
+            file_name = file.name
+            year_match = re.search(r'\d{4}', file_name)
+
+            if year_match:
+                parsed_year = year_match.group()
+                parsed_date = f"{parsed_year}-05-19"
+            else:
+                parsed_date = timezone.now().date().isoformat()
+
             points = []
             for track in gpx.tracks:
                 for segment in track.segments:
@@ -46,6 +59,7 @@ class RouteViewSet(viewsets.ModelViewSet):
                 'distanceKm': dist,
                 'points': points,
                 'name': file.name.replace('.gpx', ''),
+                'date': parsed_date,
                 'startLocation': start_location,
                 'endLocation': end_location,
             })
