@@ -1,5 +1,7 @@
 import json
 
+import gpxpy
+from django.http import HttpResponse
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -103,3 +105,22 @@ class RouteViewSet(viewsets.ModelViewSet):
             'skipped': stats['skipped'],
             'errors': stats['errors']
         })
+
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        route = self.get_object()
+
+        gpx = gpxpy.gpx.GPX()
+        gpx_track = gpxpy.gpx.GPXTrack(name=route.name)
+        gpx.tracks.append(gpx_track)
+        gpx_segment = gpxpy.gpx.GPXTrackSegment()
+        gpx_track.segments.append(gpx_segment)
+
+        for pt in route.points:
+            gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(pt['lat'], pt['lng']))
+
+        xml_data = gpx.to_xml()
+
+        response = HttpResponse(xml_data, content_type='application/gpx+xml')
+        response['Content-Disposition'] = f'attachment; filename="{route.name}.gpx"'
+        return response
