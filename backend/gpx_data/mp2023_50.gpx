@@ -27,20 +27,6 @@
  <name><![CDATA[МП2023_КП6]]></name>
 </wpt>
 <trk>
- <name><![CDATA[60° 40' 00" E]]></name>
- <trkseg>
-  <trkpt lat="56.72144692" lon="60.66666667"></trkpt>
-  <trkpt lat="56.72782776" lon="60.66666667"></trkpt>
-  <trkpt lat="56.74697027" lon="60.66666667"></trkpt>
-  <trkpt lat="56.76611279" lon="60.66666667"></trkpt>
-  <trkpt lat="56.78525530" lon="60.66666667"></trkpt>
-  <trkpt lat="56.80439782" lon="60.66666667"></trkpt>
-  <trkpt lat="56.82354033" lon="60.66666667"></trkpt>
-  <trkpt lat="56.84268284" lon="60.66666667"></trkpt>
-  <trkpt lat="56.84906368" lon="60.66666667"></trkpt>
- </trkseg>
-</trk>
-<trk>
  <name><![CDATA[Маршрут 50 км]]></name>
  <trkseg>
   <trkpt lat="56.84603501" lon="60.60169525"></trkpt>
