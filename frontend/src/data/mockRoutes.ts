@@ -35,3 +35,9 @@ export type RouteItem = {
   track: RoutePoint[];
   color: string;
 };
+
+export interface Location {
+  name: string;
+  address?: string;
+  coord?: { lat: number; lng: number };
+}

@@ -108,6 +108,10 @@ function MapPage() {
   });
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   const [isRoutesCollapsed, setIsRoutesCollapsed] = useState(false);
+  const [currentTitle, setCurrentTitle] = useState<string>("Текущее название");
+  const [isDescriptionShown, setIsDescriptionShown] = useState(false);
+  const [currentDescription, setCurrentDescription] =
+    useState<string>("Текущее описание");
 
   const filteredRoutes = useMemo(() => {
     return routes.filter((route) => {
@@ -618,6 +622,21 @@ function MapPage() {
             </div>
           )}
 
+          {isDescriptionShown ? (
+            <div className="map-overlay map-overlay-popup map-card">
+              <button
+                className="popup-close-button"
+                onClick={() => setIsDescriptionShown(false)}
+              >
+                X
+              </button>
+              <h3>{currentTitle}</h3>
+              <p>{currentDescription}</p>
+            </div>
+          ) : (
+            ""
+          )}
+
           {isRoutesCollapsed ? (
             <button
               className="panel-tab panel-tab-right"
@@ -658,20 +677,20 @@ function MapPage() {
                         </div>
                         <div className="route-title">{route.title}</div>
                         <div className="route-meta">
-                          <span>{route.distanceKm} км</span>
+                          <span>{route.distanceKm} км</span> <br />
                           <span>
                             {route.walkType === "walk"
                               ? "Пешая"
                               : "Велосипедная"}
                           </span>
                         </div>
-                        <div className="route-meta">
+                        <div className="route-meta hidden">
                           <span>Старт: {route.startTime}</span>
                           <span>Финиш: {route.finishTime}</span>
                         </div>
                         <div className="route-meta">
-                          <span>{route.startLocation.name}</span>
-                          <span>{route.finishLocation.name}</span>
+                          Старт: <span>{route.startLocation.name}</span> <br />
+                          Финиш: <span>{route.finishLocation.name}</span>
                         </div>
                       </div>
                       <div className="route-buttons">
@@ -687,9 +706,19 @@ function MapPage() {
                             </button>
                           </div>
                         </details>
-                        <a className="btn-secondary" href="#more">
+                        <button
+                          className="btn-secondary"
+                          onClick={() => {
+                            setIsDescriptionShown(true);
+                            setCurrentTitle(route.title || "Без названия");
+                            setCurrentDescription(
+                              route.description || "Без описания"
+                            );
+                            console.log(route.description);
+                          }}
+                        >
                           Подробнее
-                        </a>
+                        </button>
                       </div>
                     </div>
                   ))}
