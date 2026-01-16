@@ -267,7 +267,7 @@ function AdminPage() {
               <div className="admin-routes-layout">
                 <div className="admin-sidebar">
                   <button
-                    className="btn-primary hidden"
+                    className="btn-primary"
                     onClick={handleBulkImport}
                     disabled={isBulkImporting}
                     style={{ marginBottom: "1rem", width: "100%" }}

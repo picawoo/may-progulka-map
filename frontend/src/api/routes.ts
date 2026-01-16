@@ -1,6 +1,6 @@
 import apiClient from "./client";
 import { createColorCycle } from "../utils";
-import type { RouteItem } from "../data/mockRoutes";
+import type { RouteItem, Location } from "../data/mockRoutes";
 
 // Типы для API
 export interface ApiRoute {
@@ -27,6 +27,9 @@ export interface ParseGpxResponse {
   points: Array<{ lat: number; lng: number }>;
   distanceKm: number;
   name: string;
+  date: string;
+  startLocation: Location;
+  endLocation: Location;
 }
 
 export interface BulkImportResponse {
@@ -122,11 +125,31 @@ export const routesApi = {
   },
 
   // Скачать GPX файл маршрута
-  getGpxById: async (id: number): Promise<Blob> => {
-    const response = await apiClient.get(`/routes/${id}/download/`, {
-      responseType: "blob",
-    });
-    return response.data;
+  getGpxById: async (id: number): Promise<void> => {
+    try {
+      const response = await apiClient.get(`/routes/${id}/download/`, {
+        responseType: "blob", // Важно: указываем, что ожидаем бинарные данные
+      });
+
+      // Создаем URL для скачивания файла
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      // Создаем временную ссылку для скачивания
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `route_${id}.gpx`); // Имя файла при скачивании
+
+      // Добавляем ссылку в DOM, кликаем и удаляем
+      document.body.appendChild(link);
+      link.click();
+
+      // Очистка
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading GPX file:", error);
+      throw error;
+    }
   },
 
   // Создать новый маршрут

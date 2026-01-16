@@ -47,10 +47,10 @@ function RouteForm({
         walkType: route.walkType || "walk",
         startLocation: route.startLocation.name || "",
         finishLocation: route.finishLocation.name || "",
-        startTimeFrom: route.startTime || "11:00",
-        startTimeTo: route.startTime || "13:00",
-        finishTimeFrom: route.finishTime || "12:00",
-        finishTimeTo: route.finishTime || "21:00",
+        startTimeFrom: route.startTime || "",
+        startTimeTo: route.startTime || "",
+        finishTimeFrom: route.finishTime || "",
+        finishTimeTo: route.finishTime || "",
         date: route.date || "",
         description: route.description || "",
         tropinkiLink: "",
@@ -126,7 +126,12 @@ function RouteForm({
         distanceKm: parsed.distanceKm,
         track: parsed.points,
         name: parsed.name,
+        date: parsed.date,
+        startLocation: parsed.startLocation.name,
+        finishLocation: parsed.endLocation.name,
       }));
+      console.log(typeof parsed.startLocation);
+      console.log(parsed.startLocation);
       // Если название не задано, используем название из файла
       if (!route) {
         // Можно добавить поле title в форму, если нужно

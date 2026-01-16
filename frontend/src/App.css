@@ -268,6 +268,30 @@ footer {
   min-width: 260px;
 }
 
+.map-overlay-popup {
+  top: 12px;
+  right: 370px;
+  width: 350px;
+  min-height: 120px;
+  padding: 16px 16px 16px 16px;
+}
+
+.map-overlay-popup h3 {
+  margin: 0;
+}
+
+.popup-close-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  color: #fff;
+  border: none;
+  outline: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
 .map-card-small {
   display: flex;
   align-items: center;
@@ -419,7 +443,6 @@ details summary::-webkit-details-marker {
   background: #dc6e4b;
   border: 2px solid #fff;
   border-radius: 10px;
-  padding: 10px;
   color: #fff;
   display: grid;
   gap: 6px;
@@ -432,7 +455,7 @@ details summary::-webkit-details-marker {
   border: none;
   font-size: 16px;
   cursor: pointer;
-  padding: 0;
+  padding: 10px;
 }
 
 .dropdown-actions {
@@ -583,8 +606,6 @@ input[type="range"] {
 }
 
 .route-meta {
-  display: flex;
-  gap: 12px;
   font-size: 14px;
   color: #ffd6c7;
 }
@@ -603,6 +624,8 @@ input[type="range"] {
   padding: 10px 12px;
   border-radius: 10px;
   align-self: flex-start;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 details.small summary {
@@ -988,7 +1011,7 @@ details.small summary {
 
 .description-textarea {
   width: 100%;
-  min-height: 200px;
+  min-height: 400px;
   padding: 12px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
