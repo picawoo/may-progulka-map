@@ -3,6 +3,7 @@ import {
   Map as YMap,
   Polyline as YPolyline,
   YMaps,
+  Placemark,
 } from "@mr-igorinni/react-yandex-maps-fork";
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import Slider from "rc-slider";
@@ -379,7 +380,6 @@ function MapPage() {
               }}
             />
           ))}
-        {/*
         Маркеры точек траекторий
         {filteredRoutes.map((route) => (
           <Placemark
@@ -391,6 +391,17 @@ function MapPage() {
             properties={{ balloonContent: "Старт" }}
           />
         ))}
+        {filteredRoutes.map((route) => (
+          <Placemark
+            key={`${route.id}-finish`}
+            geometry={[
+              route.finishLocation.coord.lat,
+              route.finishLocation.coord.lng,
+            ]}
+            properties={{ balloonContent: "Финиш" }}
+          />
+        ))}
+        {/*
         {filteredRoutes.flatMap((route) =>
           route.controlPoints.map((cp) => (
             <Placemark
